@@ -1,27 +1,12 @@
 import cv2
 import numpy as np
-
-# อ่านภาพ
-image = cv2.imread(r'C:\Users\User\Desktop\perspective_tranform\img\p7.jpg ')
+image = cv2.imread(r'C:\Users\User\Desktop\perspective_tranform\img\p8.jpg')  
 original = image.copy()
 hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-
-# กำหนดช่วงค่าสีน้ำตาลใน HSV
 lower_brown = np.array([22, 85, 20])
 upper_brown = np.array([65, 255, 212])
-
-# สร้าง mask
 mask = cv2.inRange(hsv, lower_brown, upper_brown)
-
-# กำจัด noise
-kernel = np.ones((5,5), np.uint8)
-mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-
-# หา contours
 contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-# ฟังก์ชันเรียงลำดับจุด
 def order_points(pts):
     rect = np.zeros((4, 2), dtype="float32")
     s = pts.sum(axis=1)
@@ -31,12 +16,10 @@ def order_points(pts):
     rect[1] = pts[np.argmin(diff)]   # top-right
     rect[3] = pts[np.argmax(diff)]   # bottom-left
     return rect
-
-# วาด contour และแปลงภาพ
-for cnt in contours:
-    epsilon = 0.02 * cv2.arcLength(cnt, True)
-    approx = cv2.approxPolyDP(cnt, epsilon, True)
-
+if contours:
+    l_contours = max(contours, key=cv2.contourArea)
+    epsilon = 0.06 * cv2.arcLength(l_contours, True)
+    approx = cv2.approxPolyDP(l_contours, epsilon, True)
     if len(approx) == 4 and cv2.isContourConvex(approx):
         area = cv2.contourArea(approx)
         if area > 500:
@@ -68,9 +51,19 @@ for cnt in contours:
 
             # แสดงผลภาพแปลงมุมมอง
             cv2.imshow("Warped", warped)
+        
+    else:
+        hulls = [cv2.convexHull(c) for c in contours]
+        areas = [cv2.contourArea(h) for h in hulls]
+        if len(areas) > 0:
+            max_idx = np.argmax(areas)
+            max_hull = hulls[max_idx]
+            cv2.drawContours(original, [max_hull], -1, (0, 255, 0), 3)
+            mask_hull = np.zeros_like(mask)
+            cv2.drawContours(mask_hull, [max_hull], -1, 255, -1)
+            masked_image = cv2.bitwise_and(original, original, mask=mask_hull)
 
-# แสดงภาพต้นฉบับ + ตรวจจับ
-cv2.imshow("Detected Brown Rectangles", image)
-cv2.imshow("Mask", mask)
+            cv2.imshow("Masked Hull Area", masked_image)
+cv2.imshow("convex hull", original)
+cv2.imshow("mask", mask)
 cv2.waitKey(0)
-cv2.destroyAllWindows()

@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-image = cv2.imread(r'C:\Users\User\Desktop\perspective_tranform\img\p8.jpg')  
+image = cv2.imread(r'C:\Users\User\Desktop\perspective_tranform\img\p1.jpg')  
 original = image.copy()
 hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 lower_brown = np.array([22, 85, 20])
